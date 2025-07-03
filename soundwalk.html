@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>サウンドウォーク アンケート</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f7f7f7;
+    }
+    h1, h2, h3 {
+      text-align: center;
+    }
+    .screen, .surveyPage {
+      display: none;
+    }
+    input, textarea, button, select {
+      width: 100%;
+      font-size: 1rem;
+      padding: 10px;
+      margin-top: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      background: #1976d2;
+      color: white;
+      font-weight: bold;
+      border: none;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #1565c0;
+    }
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: bold;
+    }
+    #video, #previewImage {
+      width: 100%;
+      max-width: 400px;
+      margin: 10px auto;
+      display: block;
+    }
+    #progressContainer {
+      width: 100%;
+      height: 10px;
+      background: #ddd;
+      margin: 20px 0;
+    }
+    #progressBar {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+      transition: width 0.4s;
+    }
+    small {
+      color: gray;
+      display: block;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- 🚀 スタート画面 -->
+<div id="startScreen" class="screen" style="display: block;">
+  <h1>サウンドウォーク</h1>
+  <button onclick="goToInput()">始める</button>
+</div>
+
+<!-- 📝 入力画面 -->
+<div id="inputScreen" class="screen">
+  <h2>名前・性別・年齢を入力してください</h2>
+   <input type="text" id="name" placeholder="名前"><br>
+   <select id="gender">
+     <option value="">性別を選んでください</option>
+     <option value="男性">男性</option>
+     <option value="女性">女性</option>
+   </select><br>
+   <input type="number" id="age" placeholder="年齢"><br>
+   <button onclick="requestPermissions()">次へ</button>
+</div>
+
+<!-- 📷 撮影画面 -->
+<div id="cameraScreen" class="screen">
+  <h2>撮影してください</h2>
+  <video id="video" autoplay playsinline></video><br>
+  <canvas id="canvas" style="display:none;"></canvas><br>
+  <button onclick="capture()">撮影</button>
+</div>
+
+<!-- 🖼 プレビュー画面 -->
+<div id="previewScreen" class="screen">
+  <h2>この画像を使用しますか？</h2>
+  <img id="previewImage" src=""><br>
+  <button onclick="goToSurvey()">使用する</button>
+  <button onclick="retake()">再撮影</button>
+</div>
+
+<!-- 📝 アンケート画面 -->
+<div id="surveyScreen" class="screen">
+  <h2>音に関するアンケート</h2>
+  <div id="progressContainer"><div id="progressBar"></div></div>
+
+  <!-- Q1 -->
+  <div id="q1Page" class="surveyPage">
+    <h3>Q1. 気になった音は何の音ですか？</h3>
+    <small style="color: gray;">例：車の音／お店のガヤガヤした音 など</small><br>
+    <input type="text" id="q1Input" name="q1" placeholder="自由にご記入ください"><br><br>
+    <button onclick="nextSurveyPage()">次へ</button>
+  </div>
+
+  <!-- Q2 -->
+  <div id="q2Page" class="surveyPage">
+    <h3>Q2. その音に対する評価は何ですか？(選択式)</h3>
+    <small style="color: gray;">例：・やや悪い </small><br><br>
+
+　　<label><input type="radio" name="q2" value="とても良い"> とても良い</label><br>
+    <label><input type="radio" name="q2" value="やや良い"> やや良い</label><br>
+    <label><input type="radio" name="q2" value="どちらでもない"> どちらでもない</label><br>
+　　<label><input type="radio" name="q2" value="やや悪い"> やや悪い</label><br>
+　　<label><input type="radio" name="q2" value="とても悪い"> とても悪い</label><br>
+    <button onclick="prevSurveyPage()">戻る</button>
+    <button onclick="nextSurveyPage()">次へ</button>
+  </div>
+
+  <!-- Q3 -->
+  <div id="q3Page" class="surveyPage">
+    <h3 id="q3Template" style="text-align: left;">
+      Q3. <span id="q3DynamicText">(Q1) が (Q2) と評価したのはどういう理由が挙げられますか？（複数回答可）</span>
+    </h3>
+
+    <p style="color: gray; margin-top: -8px;">
+    例：「音がうるさかったから」「人々がにぎやかで楽しそうだったから」など
+  </p>
+
+    <div id="q3-container">
+    <!-- 最初の1つ目の入力欄 -->
+    <div class="q3-input-set">
+      <label>1.</label>
+      <input type="text" name="q3[]" placeholder="理由1">
+    </div>
+  </div>
+
+  <button type="button" onclick="addQ3Input()">＋ 理由を追加</button><br><br>
+
+  <button onclick="prevSurveyPage()">戻る</button>
+  <button onclick="nextSurveyPage()">次へ</button>
+  </div>
+  
+ <!-- Q4 -->
+  <div id="q4Page" class="surveyPage" style="display: none;">
+     <h3 id="q4Template" style="text-align: left;">
+       Q4. <span id="q4DynamicText">Q3をふまえて以下の質問に答えてください</span>
+    </h3>
+
+    <p style="color: gray; margin-top: -8px;">
+    例：「不快に感じる」「自分もワクワクする」など
+  </p>
+
+    <div id="q4-container"></div>
+
+  <button onclick="prevSurveyPage()">戻る</button>
+  <button onclick="completeSurvey()">送信する</button>
+  </div>
+
+</div>
+
+<!-- ✅ 完了画面 -->
+<div id="doneScreen" class="screen">
+  <h2>入力が完了しました！</h2>
+  <p>ご協力ありがとうございました。</p>
+  <button onclick="location.reload()">最初に戻る</button>
+</div>
+
+<script>
+let latitude = null, longitude = null, weather = "不明";
+let currentSurvey = 1;
+const totalSurvey = 4;
+
+function goToInput() {
+   console.log("goToInput() が呼ばれたよ");
+  switchScreen("inputScreen");
+}
+
+function requestPermissions() {
+  const name = document.getElementById("name").value.trim();
+  const gender = document.getElementById("gender").value;
+  const age = document.getElementById("age").value.trim();
+
+  if (!name || !gender || !age) {
+    alert("名前・性別・年齢すべてを入力してください");
+    return;
+  }
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    document.getElementById("video").srcObject = stream;
+    switchScreen("cameraScreen");
+  }).catch(() => {
+    alert("カメラの使用が許可されていません");
+  });
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    latitude = pos.coords.latitude;
+    longitude = pos.coords.longitude;
+    getWeather();
+  });
+
+  navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    document.getElementById("video").srcObject = stream;
+    switchScreen("cameraScreen");
+  }).catch(() => {
+    alert("カメラの使用が許可されていません");
+  });
+}
+
+function getWeather() {
+  const apiKey = "ddf228dc78adbc76e8419917bc2ce4cd"; // ★天気取得にはキーが必要
+  fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=ja`)
+    .then(res => res.json())
+    .then(data => {
+      weather = `${data.weather[0].description}（${data.main.temp}℃）`;
+    });
+}
+
+function switchScreen(id) {
+  document.querySelectorAll(".screen").forEach(el => el.style.display = "none");
+  document.getElementById(id).style.display = "block";
+}
+
+function capture() {
+  const name = document.getElementById("name").value.trim();
+  const gender = document.getElementById("gender").value;
+  const age = document.getElementById("age").value.trim();
+
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0);
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px sans-serif";
+  ctx.fillText(`${name} / ${gender} / ${age}歳`, 10, 30);
+  ctx.fillText(weather, 10, 60);
+
+  document.getElementById("previewImage").src = canvas.toDataURL("image/png");
+  switchScreen("previewScreen");
+}
+
+function retake() {
+  switchScreen("cameraScreen");
+}
+
+function goToSurvey() {
+  switchScreen("surveyScreen");
+  showSurveyPage(1);
+}
+
+function showSurveyPage(id) {
+  document.querySelectorAll(".surveyPage").forEach(p => p.style.display = "none");
+  const el = document.getElementById(`q${id}Page`);
+  if (el) el.style.display = "block";
+
+  currentSurvey = id;
+  document.getElementById("progressBar").style.width = `${(id / totalSurvey) * 100}%`;
+
+  if (id === 3) {
+    const q1 = document.getElementById("q1").value.trim();
+    const q2 = document.querySelector('input[name="q2"]:checked')?.value || "";
+    document.getElementById("q3Template").innerText = `Q3.「${q1}」が「${q2}」と評価したのはどのような理由が挙げられますか？(複数回答可)`;
+  }
+
+　if (id === 4) {
+  　const q2 = document.querySelector('input[name="q2"]:checked')?.value || "";
+ 　 const q3 = document.getElementById("q3").value.trim();
+  　document.getElementById("q4Template").innerText = `Q4. Q3をふまえて以下の質問に答えてください`;
+　}
+
+}
+
+function nextSurveyPage() {
+  const current = document.querySelector(".surveyPage:not([style*='display: none'])");
+  const next = current.nextElementSibling;
+
+  if (next && next.classList.contains("surveyPage")) {
+  next.style.display = "block";
+  currentSurvey++; // ← これを追加！
+  document.getElementById("progressBar").style.width = `${(currentSurvey / totalSurvey) * 100}%`;
+}
+
+  // 🔁 Q2 → Q3 に進むとき：Q3の質問文を動的に更新！
+  if (current.id === "q2Page") {
+    updateQ3Heading();
+  }
+
+  // 🔁 Q3 → Q4 に進むとき：Q3の入力からQ4の設問を生成！
+  if (current.id === "q3Page") {
+   generateQ4FieldsFromQ3();
+   updateQ4Heading();
+  }
+
+  current.style.display = "none";
+  if (next && next.classList.contains("surveyPage")) {
+    next.style.display = "block";
+  }
+}
+
+function prevSurveyPage() {
+  if (currentSurvey > 1) {
+    showSurveyPage(currentSurvey - 1);
+  }
+}
+
+function updateQ3Heading() {
+  const q1 = document.getElementById("q1Input").value.trim();
+  const q2 = document.querySelector('input[name="q2"]:checked')?.value || "";
+  const span = document.getElementById("q3DynamicText");
+
+  // フォールバックも兼ねて自然な表現にする
+  span.textContent = `「${q1 || "この音"} 」が 「${q2 || "この評価"} 」と評価したのはどういう理由が挙げられますか？（複数回答可）`;
+}
+
+function updateQ4Heading() {
+  const q1 = document.getElementById("q1Input").value.trim();
+  const dynamic = document.getElementById("q4DynamicText");
+  dynamic.textContent = `Q3をふまえて「${q1 || "この音"}」について以下の質問に答えてください`;
+}
+
+function generateQ4FieldsFromQ3() {
+  const q1 = document.getElementById("q1Input").value.trim() || "この音";
+  const q3Inputs = Array.from(document.querySelectorAll('input[name="q3[]"]'))
+    .map(input => input.value.trim())
+    .filter(val => val !== "");
+  const q3 = q3Inputs.join("\n");
+
+  const q4Container = document.getElementById("q4-container");
+  q4Container.innerHTML = ""; // 初期化
+
+  q3Inputs.forEach((reason, idx) => {
+    const div = document.createElement("div");
+    div.className = "q4-input-set";
+    div.innerHTML = `
+      <label><strong>${idx + 1}.「${q1}」が「${reason}」だとどういう気持ちになりますか／どうなりますか？</strong></label><br>
+      <textarea name="q4[]" rows="3" placeholder="自由にご記入してください"></textarea><br><br>
+    `;
+    q4Container.appendChild(div);
+  });
+}
+
+function completeSurvey() {
+  const name = document.getElementById("name").value.trim();
+  const gender = document.getElementById("gender").value;
+  const age = document.getElementById("age").value.trim();
+  const q1 = document.getElementById("q1Input").value.trim();
+  const q2 = document.querySelector('input[name="q2"]:checked')?.value || "";
+  const q3Inputs = Array.from(document.querySelectorAll('input[name="q3[]"]'))
+  .map(input => input.value.trim())
+  .filter(val => val !== "");
+  const q3 = q3Inputs.join("\n");
+const q4Inputs = Array.from(document.querySelectorAll('textarea[name="q4[]"]'))
+  .map(el => el.value.trim())
+  .filter(val => val !== "");
+  const q4 = q4Inputs.join("\n");
+  const imageData = document.getElementById("canvas").toDataURL("image/png");
+
+  // 保存：アンケート内容
+  const text = `名前：${document.getElementById("name").value}\n性別：${gender}\n年齢：${age}\n緯度経度：${latitude}, ${longitude}\n天気：${weather}\n\nQ1：${q1}\nQ2：${q2}\nQ3：${q3}\nQ4：${q4}`;//
+  const blob = new Blob([text], {type: "text/plain"});
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `回答_${Date.now()}.txt`;
+  link.click();
+
+  // 保存：画像
+  const a = document.createElement("a");
+  a.href = imageData;
+  a.download = `画像_${Date.now()}.png`;
+  a.click();
+
+  // （オプション）送信処理
+  fetch("https://csv-upload-api-vcnd.onrender.com/submit", {
+    method: "POST",
+    headers: {"Content-Type": "application/x-www-form-urlencoded"},
+    body: new URLSearchParams({
+      name: document.getElementById("name").value,
+      gender: gender,
+      age: age,
+      lat: latitude,
+      lon: longitude,
+      weather: weather,
+      image: imageData,
+      q1: q1, q2: q2, q3: q3, q4: q4
+    })
+  }).then(res => res.text())
+    .then(msg => console.log("送信成功:", msg))
+    .catch(err => alert("送信エラー: " + err))
+    .finally(() => switchScreen("doneScreen"));
+}
+</script>
+
+<script>
+  let q3Index = 1;
+
+  function addQ3Input() {
+    q3Index++;
+    const container = document.getElementById("q3-container");
+    const div = document.createElement("div");
+    div.className = "q3-input-set";
+    div.innerHTML = `
+      <label>${q3Index}.</label>
+      <input type="text" name="q3[]" placeholder="理由${q3Index}">
+    `;
+    container.appendChild(div);
+  }
+</script>
+
+</body>
+</html>
