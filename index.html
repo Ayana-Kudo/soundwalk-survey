@@ -202,7 +202,10 @@ function requestPermissions() {
     return;
   }
 
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode:"environment"}
+  })
+   .then(stream => {
     document.getElementById("video").srcObject = stream;
     switchScreen("cameraScreen");
   }).catch(() => {
@@ -214,14 +217,6 @@ function requestPermissions() {
     longitude = pos.coords.longitude;
     getWeather();
   });
-
-  navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-    document.getElementById("video").srcObject = stream;
-    switchScreen("cameraScreen");
-  }).catch(() => {
-    alert("カメラの使用が許可されていません");
-  });
-}
 
 function getWeather() {
   const apiKey = "ddf228dc78adbc76e8419917bc2ce4cd"; // ★天気取得にはキーが必要
