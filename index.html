@@ -179,7 +179,10 @@
 <div id="doneScreen" class="screen">
   <h2>入力が完了しました！</h2>
   <p>ご協力ありがとうございました。</p>
-  <button onclick="location.reload()">最初に戻る</button>
+  
+  <button onclick="restartSurvey()">新しい回答を記録する</button>
+  <button onclick="location.reload()">終了する</button>
+
 </div>
 
 <script>
@@ -236,6 +239,55 @@ function requestPermissions() {
     getWeather();
   });
 
+}
+
+function clearSurveyInputs() {
+  // Q1 入力欄をクリア
+  document.getElementById("q1Input").value = "";
+
+  // Q2 ラジオボタンを全部未選択
+  document.querySelectorAll('input[name="q2"]').forEach(el => el.checked = false);
+
+  // Q3の入力欄（理由）を全部削除 → 最初の1個だけ残す
+  const q3Container = document.getElementById("q3-container");
+  q3Container.innerHTML = "";
+  q3Index = 1;
+  const firstInput = document.createElement("div");
+  firstInput.className = "q3-input-set";
+  firstInput.innerHTML = `<label>1.</label><input type="text" name="q3[]" placeholder="理由1">`;
+  q3Container.appendChild(firstInput);
+
+  // Q4のテキストエリアを全部削除
+  document.getElementById("q4-container").innerHTML = "";
+
+  // プログレスバーも初期化
+  currentSurvey = 1;
+  document.getElementById("progressBar").style.width = "0%";
+}
+
+function restartSurvey() {
+  clearSurveyInputs(); // ← 最初に呼んで入力欄をクリア！
+
+  // 入力内容はすでに保持されているので、
+  // いきなりカメラ画面に飛ばしてOK！
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(stream => {
+      document.getElementById("video").srcObject = stream;
+      switchScreen("cameraScreen");
+    })
+    .catch(err => {
+      console.warn("外カメラ取得失敗:", err);
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          document.getElementById("video").srcObject = stream;
+          switchScreen("cameraScreen");
+        })
+        .catch(() => {
+          alert("カメラが利用できませんでした 😢");
+        });
+    });
+
+  // 位置情報は保持済みなので再取得不要！（必要なら再呼び出しOK）
 }
 
 function switchScreen(id) {
