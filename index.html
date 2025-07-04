@@ -192,6 +192,15 @@ function goToInput() {
   switchScreen("inputScreen");
 }
 
+function getWeather() {
+  const apiKey = "ddf228dc78adbc76e8419917bc2ce4cd"; // ★天気取得にはキーが必要
+  fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=ja`)
+    .then(res => res.json())
+    .then(data => {
+      weather = `${data.weather[0].description}（${data.main.temp}℃）`;
+    });
+}
+
 function requestPermissions() {
   const name = document.getElementById("name").value.trim();
   const gender = document.getElementById("gender").value;
@@ -202,14 +211,23 @@ function requestPermissions() {
     return;
   }
 
-    navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode:"environment"}
-  })
-   .then(stream => {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+  .then(stream => {
     document.getElementById("video").srcObject = stream;
     switchScreen("cameraScreen");
-  }).catch(() => {
-    alert("カメラの使用が許可されていません");
+  })
+  .catch(err => {
+    console.warn("外カメラ取得失敗:", err);
+    // ← 外カメ取得に失敗したら、内カメラで再チャレンジ
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        document.getElementById("video").srcObject = stream;
+        switchScreen("cameraScreen");
+      })
+      .catch(err => {
+        console.error("カメラ取得完全に失敗:", err);
+        alert("カメラが利用できませんでした 😢");
+      });
   });
 
   navigator.geolocation.getCurrentPosition(pos => {
@@ -218,13 +236,6 @@ function requestPermissions() {
     getWeather();
   });
 
-function getWeather() {
-  const apiKey = "ddf228dc78adbc76e8419917bc2ce4cd"; // ★天気取得にはキーが必要
-  fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${apiKey}&units=metric&lang=ja`)
-    .then(res => res.json())
-    .then(data => {
-      weather = `${data.weather[0].description}（${data.main.temp}℃）`;
-    });
 }
 
 function switchScreen(id) {
